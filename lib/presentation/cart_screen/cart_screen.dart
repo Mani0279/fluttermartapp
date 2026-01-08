@@ -19,10 +19,12 @@ import './widgets/empty_cart_widget.dart';
 /// - Empty cart state with continue shopping CTA
 /// - Pull-to-refresh for pricing updates
 /// - Smooth removal animations
+/// - Synced with ProductListingScreen via CartController
 class CartScreen extends StatelessWidget {
   CartScreen({Key? key}) : super(key: key);
 
-  final CartController controller = Get.put(CartController());
+  // Use existing CartController instance (single source of truth)
+  final CartController controller = Get.find<CartController>();
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +35,11 @@ class CartScreen extends StatelessWidget {
       appBar: _buildAppBar(context, theme),
       body: Obx(
             () => controller.isLoading.value
-            ? Center(child: CircularProgressIndicator())
+            ? Center(
+          child: CircularProgressIndicator(
+            color: theme.colorScheme.primary,
+          ),
+        )
             : controller.cartItems.isEmpty
             ? EmptyCartWidget()
             : _buildCartContent(context, theme),
@@ -98,6 +104,7 @@ class CartScreen extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final item = controller.cartItems[index];
                   return CartItemWidget(
+                    key: ValueKey(item['id']), // Important for proper updates
                     item: item,
                     onQuantityChanged: (newQuantity) =>
                         controller.updateQuantity(item['id'], newQuantity),

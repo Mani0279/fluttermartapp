@@ -9,7 +9,7 @@ import '../../../core/app_export.dart';
 /// Features:
 /// - Reddit-inspired card design
 /// - Product image, name, and price display
-/// - Quantity adjustment controls
+/// - Smart quantity adjustment controls (remove icon when qty = 1)
 /// - Swipe-left to delete with confirmation
 /// - Long-press for additional options
 /// - Smooth animations
@@ -125,7 +125,8 @@ class CartItemWidget extends StatelessWidget {
     );
   }
 
-  /// Builds quantity adjustment controls
+  /// Builds quantity adjustment controls with smart remove button
+  /// When quantity = 1, shows delete icon instead of minus icon
   Widget _buildQuantityControls(ThemeData theme, int quantity) {
     return Container(
       decoration: BoxDecoration(
@@ -135,10 +136,20 @@ class CartItemWidget extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Smart decrement button: shows delete icon when qty = 1
           _buildQuantityButton(
             theme: theme,
-            icon: 'remove',
-            onPressed: () => onQuantityChanged(quantity - 1),
+            icon: quantity == 1 ? 'delete_outline' : 'remove',
+            iconColor: quantity == 1 ? theme.colorScheme.error : theme.colorScheme.primary,
+            onPressed: () {
+              if (quantity == 1) {
+                // When quantity is 1, trigger remove confirmation
+                onRemove();
+              } else {
+                // Normal decrement
+                onQuantityChanged(quantity - 1);
+              }
+            },
           ),
           Container(
             width: 12.w,
@@ -154,6 +165,7 @@ class CartItemWidget extends StatelessWidget {
           _buildQuantityButton(
             theme: theme,
             icon: 'add',
+            iconColor: theme.colorScheme.primary,
             onPressed: () => onQuantityChanged(quantity + 1),
           ),
         ],
@@ -161,10 +173,11 @@ class CartItemWidget extends StatelessWidget {
     );
   }
 
-  /// Builds quantity adjustment button
+  /// Builds quantity adjustment button with custom icon color
   Widget _buildQuantityButton({
     required ThemeData theme,
     required String icon,
+    required Color iconColor,
     required VoidCallback onPressed,
   }) {
     return InkWell(
@@ -176,7 +189,7 @@ class CartItemWidget extends StatelessWidget {
         alignment: Alignment.center,
         child: CustomIconWidget(
           iconName: icon,
-          color: theme.colorScheme.primary,
+          color: iconColor,
           size: 20,
         ),
       ),

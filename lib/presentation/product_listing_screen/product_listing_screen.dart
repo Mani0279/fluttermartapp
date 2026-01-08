@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../core/app_export.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_icon_widget.dart';
+import '../cart_screen/controller/cart_controller.dart';
 import './widgets/product_card_widget.dart';
 
-/// Product Listing Screen - Main shopping hub with grid layout
+/// Product Listing Screen - Main shopping hub with global cart integration
 ///
 /// Features:
 /// - Grid layout (2 columns on phones, 3 on tablets)
 /// - Swipe-right gesture on cards for quick cart addition
 /// - Tap navigation to product details
-/// - Real-time cart badge updates
+/// - Real-time cart badge updates via CartController
 /// - Pull-to-refresh functionality
 /// - Reddit-inspired card design
+/// - Single source of truth for cart state
 class ProductListingScreen extends StatefulWidget {
   const ProductListingScreen({Key? key}) : super(key: key);
 
@@ -22,9 +25,9 @@ class ProductListingScreen extends StatefulWidget {
 }
 
 class _ProductListingScreenState extends State<ProductListingScreen> {
-  // Cart state management
-  int _cartItemCount = 0;
-  final Set<int> _cartProductIds = {};
+  // Global cart controller - single source of truth
+  late final CartController _cartController;
+
   bool _isRefreshing = false;
 
   // Mock product data
@@ -133,6 +136,18 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // Initialize or find existing CartController
+    try {
+      _cartController = Get.find<CartController>();
+    } catch (e) {
+      // If not found, create new instance
+      _cartController = Get.put(CartController());
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -141,7 +156,8 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
       appBar: CustomAppBar(
         title: 'FlutterMart',
         showCartBadge: true,
-        cartItemCount: _cartItemCount,
+        // Use Obx to reactively update cart badge
+        cartItemCount: _cartController.cartItemCount.value,
         onCartTap: () {
           Navigator.of(context, rootNavigator: true).pushNamed('/cart-screen');
         },
@@ -160,12 +176,12 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
     );
   }
 
-  /// Builds the product grid layout
+  /// Builds the product grid layout with reactive cart state
   Widget _buildProductGrid(ThemeData theme) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    // Determine grid columns based on screen width using MediaQuery
+    // Determine grid columns based on screen width
     final int crossAxisCount = screenWidth > 600 ? 3 : 2;
 
     return GridView.builder(
@@ -182,12 +198,16 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
       itemCount: _products.length,
       itemBuilder: (context, index) {
         final product = _products[index];
-        final isInCart = _cartProductIds.contains(product["id"] as int);
-        return ProductCardWidget(
-          product: product,
-          isInCart: isInCart,
-          onTap: () => _navigateToProductDetail(product),
-          onSwipeRight: () => _addToCart(product),
+        final productId = product["id"] as int;
+
+        // Use Obx to reactively check if product is in cart
+        return Obx(
+              () => ProductCardWidget(
+            product: product,
+            isInCart: _cartController.isInCart(productId),
+            onTap: () => _navigateToProductDetail(product),
+            onSwipeRight: () => _addToCart(product),
+          ),
         );
       },
     );
@@ -233,71 +253,61 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
     ).pushNamed('/product-detail-screen', arguments: product);
   }
 
-  /// Adds product to cart with haptic feedback
+  /// Adds product to cart using CartController (single source of truth)
   void _addToCart(Map<String, dynamic> product) {
     final productId = product["id"] as int;
+
+    // Check if already in cart before showing success message
+    if (_cartController.isInCart(productId)) {
+      // CartController will show "Already in cart" toast
+      _cartController.addToCart(product);
+      return;
+    }
+
+    // Add to cart via controller
+    _cartController.addToCart(product);
+
+    // Show success feedback with 4-second auto-dismiss timer
+    final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
 
-    if (!_cartProductIds.contains(productId)) {
-      setState(() {
-        _cartProductIds.add(productId);
-        _cartItemCount++;
-      });
-
-      // Show success feedback
-      final theme = Theme.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              CustomIconWidget(
-                iconName: 'check_circle',
-                color: theme.colorScheme.tertiary,
-                size: 20,
-              ),
-              SizedBox(width: screenWidth * 0.02),
-              Expanded(
-                child: Text(
-                  '${product["name"]} added to cart',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onInverseSurface,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: theme.colorScheme.inverseSurface,
-          action: SnackBarAction(
-            label: 'VIEW CART',
-            textColor: theme.colorScheme.tertiary,
-            onPressed: () {
-              Navigator.of(
-                context,
-                rootNavigator: true,
-              ).pushNamed('/cart-screen');
-            },
-          ),
-        ),
-      );
-    } else {
-      // Already in cart feedback
-      final theme = Theme.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Already in cart',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onInverseSurface,
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            CustomIconWidget(
+              iconName: 'check_circle',
+              color: theme.colorScheme.tertiary,
+              size: 20,
             ),
-          ),
-          duration: const Duration(seconds: 1),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: theme.colorScheme.inverseSurface,
+            SizedBox(width: screenWidth * 0.02),
+            Expanded(
+              child: Text(
+                '${product["name"]} added to cart',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onInverseSurface,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
-      );
-    }
+        duration: const Duration(seconds: 4), // Auto-dismiss after 4 seconds
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: theme.colorScheme.inverseSurface,
+        action: SnackBarAction(
+          label: 'VIEW',
+          textColor: theme.colorScheme.tertiary,
+          onPressed: () {
+            // Dismiss snackbar immediately and navigate
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            Navigator.of(
+              context,
+              rootNavigator: true,
+            ).pushNamed('/cart-screen');
+          },
+        ),
+      ),
+    );
   }
 }

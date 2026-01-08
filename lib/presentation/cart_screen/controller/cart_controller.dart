@@ -2,18 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
-/// Cart Controller - Manages cart state and operations
+/// Enhanced Cart Controller - Single Source of Truth for Cart Management
 ///
 /// Features:
-/// - Cart items management with GetX reactive state
+/// - Global cart state with GetX reactive state
+/// - Product tracking to prevent duplicates
 /// - Quantity updates with validation
 /// - Item removal with confirmation
 /// - Cart total calculation
-/// - Clear all functionality
-/// - Pull-to-refresh support
+/// - Real-time synchronization across screens
+/// - Comprehensive edge case handling
 class CartController extends GetxController {
   // Observable cart items list
   final RxList<Map<String, dynamic>> cartItems = <Map<String, dynamic>>[].obs;
+
+  // Track which product IDs are in cart (for quick lookups)
+  final RxSet<int> cartProductIds = <int>{}.obs;
+
+  // Cart item count for badge display
+  final RxInt cartItemCount = 0.obs;
 
   // Loading state for refresh operations
   final RxBool isLoading = false.obs;
@@ -26,62 +33,121 @@ class CartController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _loadCartItems();
+    _initializeCart();
   }
 
-  /// Loads initial cart items with mock data
-  void _loadCartItems() {
+  /// Initializes empty cart (no mock data by default)
+  void _initializeCart() {
     isLoading.value = true;
 
-    // Mock cart items data
-    cartItems.value = [
-      {
-        "id": 1,
-        "name": "Premium Wireless Headphones",
-        "price": 299.99,
-        "quantity": 1,
-        "image":
-        "https://img.rocket.new/generatedImages/rocket_gen_img_1119295e3-1765076790006.png",
-        "semanticLabel":
-        "Black wireless over-ear headphones with cushioned ear cups on white background",
-      },
-      {
-        "id": 2,
-        "name": "Smart Fitness Watch",
-        "price": 199.99,
-        "quantity": 2,
-        "image":
-        "https://img.rocket.new/generatedImages/rocket_gen_img_1dd51548c-1764641911784.png",
-        "semanticLabel":
-        "Silver smartwatch with black band displaying fitness metrics on screen",
-      },
-      {
-        "id": 3,
-        "name": "Leather Laptop Bag",
-        "price": 89.99,
-        "quantity": 1,
-        "image": "https://images.unsplash.com/photo-1679038138004-4162c92209e9",
-        "semanticLabel":
-        "Brown leather messenger bag with metal buckles and adjustable strap",
-      },
-      {
-        "id": 4,
-        "name": "Portable Bluetooth Speaker",
-        "price": 79.99,
-        "quantity": 1,
-        "image":
-        "https://img.rocket.new/generatedImages/rocket_gen_img_1e0d00680-1766384379855.png",
-        "semanticLabel":
-        "Compact cylindrical bluetooth speaker in matte black finish with control buttons",
-      },
-    ];
+    // Start with empty cart - user will add items via product listing
+    cartItems.clear();
+    cartProductIds.clear();
+    cartItemCount.value = 0;
 
     _calculateTotals();
     isLoading.value = false;
   }
 
+  /// Checks if a product is already in the cart
+  bool isInCart(int productId) {
+    return cartProductIds.contains(productId);
+  }
+
+  /// Adds product to cart with validation and edge case handling
+  void addToCart(Map<String, dynamic> product) {
+    try {
+      final productId = product['id'] as int;
+
+      // Edge Case 1: Check if product already exists in cart
+      if (isInCart(productId)) {
+        Fluttertoast.showToast(
+          msg: "Already in cart",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.orange,
+          textColor: Colors.white,
+        );
+        return;
+      }
+
+      // Edge Case 2: Validate required fields
+      if (!product.containsKey('name') ||
+          !product.containsKey('price') ||
+          !product.containsKey('image')) {
+        Fluttertoast.showToast(
+          msg: "Invalid product data",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+        return;
+      }
+
+      // Convert price from string format "$89.99" to double 89.99
+      double priceValue;
+      final priceStr = product['price'] as String;
+
+      try {
+        priceValue = double.parse(priceStr.replaceAll('\$', '').replaceAll(',', ''));
+      } catch (e) {
+        print('Error parsing price: $e');
+        Fluttertoast.showToast(
+          msg: "Invalid price format",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+        return;
+      }
+
+      // Create cart item with consistent structure
+      final cartItem = {
+        'id': productId,
+        'name': product['name'],
+        'price': priceValue, // Store as double, not string
+        'quantity': 1, // Default quantity
+        'image': product['image'],
+        'semanticLabel': product['semanticLabel'] ?? 'Product image',
+      };
+
+      // Add to cart
+      cartItems.add(cartItem);
+      cartProductIds.add(productId);
+      cartItemCount.value = cartItems.length;
+
+      // Trigger reactive updates
+      cartItems.refresh();
+      cartProductIds.refresh();
+
+      _calculateTotals();
+
+      // Success feedback
+      Fluttertoast.showToast(
+        msg: "${product['name']} added to cart",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+      );
+
+    } catch (e) {
+      print('Error adding to cart: $e');
+      Fluttertoast.showToast(
+        msg: "Failed to add to cart",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    }
+  }
+
   /// Updates item quantity with validation
   void updateQuantity(int itemId, int newQuantity) {
+    // Edge Case 1: Minimum quantity validation
     if (newQuantity < 1) {
       Fluttertoast.showToast(
         msg: "Quantity must be at least 1",
@@ -93,6 +159,7 @@ class CartController extends GetxController {
       return;
     }
 
+    // Edge Case 2: Maximum quantity validation
     if (newQuantity > 10) {
       Fluttertoast.showToast(
         msg: "Maximum quantity is 10",
@@ -104,18 +171,29 @@ class CartController extends GetxController {
       return;
     }
 
+    // Edge Case 3: Item not found
     final index = cartItems.indexWhere((item) => item['id'] == itemId);
-    if (index != -1) {
-      cartItems[index]['quantity'] = newQuantity;
-      cartItems.refresh();
-      _calculateTotals();
-
+    if (index == -1) {
       Fluttertoast.showToast(
-        msg: "Quantity updated",
+        msg: "Item not found in cart",
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
       );
+      return;
     }
+
+    // Update quantity
+    cartItems[index]['quantity'] = newQuantity;
+    cartItems.refresh();
+    _calculateTotals();
+
+    Fluttertoast.showToast(
+      msg: "Quantity updated",
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+    );
   }
 
   /// Removes item from cart with confirmation
@@ -150,21 +228,56 @@ class CartController extends GetxController {
     );
   }
 
-  /// Performs actual item removal
+  /// Performs actual item removal with state synchronization
   void _performRemoval(int itemId) {
-    cartItems.removeWhere((item) => item['id'] == itemId);
-    _calculateTotals();
+    try {
+      // Edge Case: Check if item exists before removal
+      if (!cartProductIds.contains(itemId)) {
+        Fluttertoast.showToast(
+          msg: "Item not found in cart",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+        return;
+      }
 
-    Fluttertoast.showToast(
-      msg: "Item removed from cart",
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.BOTTOM,
-      backgroundColor: Colors.green,
-      textColor: Colors.white,
-    );
+      // Remove from cart items
+      cartItems.removeWhere((item) => item['id'] == itemId);
+
+      // Remove from product ID tracking
+      cartProductIds.remove(itemId);
+
+      // Update count
+      cartItemCount.value = cartItems.length;
+
+      // Trigger reactive updates
+      cartItems.refresh();
+      cartProductIds.refresh();
+
+      _calculateTotals();
+
+      Fluttertoast.showToast(
+        msg: "Item removed from cart",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+      );
+    } catch (e) {
+      print('Error removing item: $e');
+      Fluttertoast.showToast(
+        msg: "Failed to remove item",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    }
   }
 
-  /// Clears all items from cart
+  /// Clears all items from cart with confirmation
   void clearCart(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -184,16 +297,7 @@ class CartController extends GetxController {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              cartItems.clear();
-              _calculateTotals();
-
-              Fluttertoast.showToast(
-                msg: "Cart cleared",
-                toastLength: Toast.LENGTH_SHORT,
-                gravity: ToastGravity.BOTTOM,
-                backgroundColor: Colors.green,
-                textColor: Colors.white,
-              );
+              _performClearCart();
             },
             child: Text(
               'Clear All',
@@ -205,18 +309,52 @@ class CartController extends GetxController {
     );
   }
 
-  /// Calculates cart totals
+  /// Performs cart clearing with state synchronization
+  void _performClearCart() {
+    cartItems.clear();
+    cartProductIds.clear();
+    cartItemCount.value = 0;
+
+    cartItems.refresh();
+    cartProductIds.refresh();
+
+    _calculateTotals();
+
+    Fluttertoast.showToast(
+      msg: "Cart cleared",
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: Colors.green,
+      textColor: Colors.white,
+    );
+  }
+
+  /// Calculates cart totals with proper validation
   void _calculateTotals() {
     double calculatedSubtotal = 0.0;
 
-    for (var item in cartItems) {
-      calculatedSubtotal +=
-          (item['price'] as double) * (item['quantity'] as int);
-    }
+    try {
+      for (var item in cartItems) {
+        // Edge Case: Validate item structure
+        if (!item.containsKey('price') || !item.containsKey('quantity')) {
+          print('Warning: Cart item missing price or quantity');
+          continue;
+        }
 
-    subtotal.value = calculatedSubtotal;
-    tax.value = calculatedSubtotal * 0.08; // 8% tax
-    total.value = subtotal.value + tax.value;
+        final price = item['price'] as double;
+        final quantity = item['quantity'] as int;
+        calculatedSubtotal += price * quantity;
+      }
+
+      subtotal.value = calculatedSubtotal;
+      tax.value = calculatedSubtotal * 0.08; // 8% tax
+      total.value = subtotal.value + tax.value;
+    } catch (e) {
+      print('Error calculating totals: $e');
+      subtotal.value = 0.0;
+      tax.value = 0.0;
+      total.value = 0.0;
+    }
   }
 
   /// Refreshes cart data (pull-to-refresh)
@@ -231,8 +369,9 @@ class CartController extends GetxController {
     );
   }
 
-  /// Proceeds to checkout
+  /// Proceeds to checkout with validation
   void proceedToCheckout(BuildContext context) {
+    // Edge Case: Empty cart validation
     if (cartItems.isEmpty) {
       Fluttertoast.showToast(
         msg: "Your cart is empty",
@@ -244,9 +383,34 @@ class CartController extends GetxController {
       return;
     }
 
+    // Edge Case: Validate cart items before checkout
+    for (var item in cartItems) {
+      if (item['quantity'] < 1) {
+        Fluttertoast.showToast(
+          msg: "Invalid quantity in cart",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+        return;
+      }
+    }
+
     Navigator.of(
       context,
       rootNavigator: true,
     ).pushNamed('/checkout-step-1-user-details');
+  }
+
+  /// Debug method to print cart state
+  void printCartState() {
+    print('=== CART STATE ===');
+    print('Items: ${cartItems.length}');
+    print('Product IDs: $cartProductIds');
+    print('Count: ${cartItemCount.value}');
+    print('Subtotal: \$${subtotal.value.toStringAsFixed(2)}');
+    print('Total: \$${total.value.toStringAsFixed(2)}');
+    print('==================');
   }
 }
