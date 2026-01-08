@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
 import '../../widgets/custom_app_bar.dart';
@@ -163,16 +162,22 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
 
   /// Builds the product grid layout
   Widget _buildProductGrid(ThemeData theme) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
     // Determine grid columns based on screen width using MediaQuery
-    final int crossAxisCount = MediaQuery.of(context).size.width > 600 ? 3 : 2;
+    final int crossAxisCount = screenWidth > 600 ? 3 : 2;
 
     return GridView.builder(
-      padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
+      padding: EdgeInsets.symmetric(
+        horizontal: screenWidth * 0.04,
+        vertical: screenHeight * 0.02,
+      ),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        childAspectRatio: 0.7,
-        crossAxisSpacing: 3.w,
-        mainAxisSpacing: 2.h,
+        childAspectRatio: 0.65,
+        crossAxisSpacing: screenWidth * 0.03,
+        mainAxisSpacing: screenHeight * 0.02,
       ),
       itemCount: _products.length,
       itemBuilder: (context, index) {
@@ -231,6 +236,7 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
   /// Adds product to cart with haptic feedback
   void _addToCart(Map<String, dynamic> product) {
     final productId = product["id"] as int;
+    final screenWidth = MediaQuery.of(context).size.width;
 
     if (!_cartProductIds.contains(productId)) {
       setState(() {
@@ -249,7 +255,7 @@ class _ProductListingScreenState extends State<ProductListingScreen> {
                 color: theme.colorScheme.tertiary,
                 size: 20,
               ),
-              SizedBox(width: 2.w),
+              SizedBox(width: screenWidth * 0.02),
               Expanded(
                 child: Text(
                   '${product["name"]} added to cart',

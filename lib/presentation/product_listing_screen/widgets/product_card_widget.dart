@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
 
@@ -38,6 +37,8 @@ class _ProductCardWidgetState extends State<ProductCardWidget> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -50,11 +51,13 @@ class _ProductCardWidgetState extends State<ProductCardWidget> {
         setState(() {
           _dragOffset += details.delta.dx;
           if (_dragOffset < 0) _dragOffset = 0;
-          if (_dragOffset > 20.w) _dragOffset = 20.w;
+          if (_dragOffset > screenWidth * 0.2) {
+            _dragOffset = screenWidth * 0.2;
+          }
         });
       },
       onHorizontalDragEnd: (details) {
-        if (_dragOffset > 15.w) {
+        if (_dragOffset > screenWidth * 0.15) {
           widget.onSwipeRight();
         }
         setState(() {
@@ -73,18 +76,19 @@ class _ProductCardWidgetState extends State<ProductCardWidget> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildProductImage(theme),
+              _buildProductImage(theme, screenWidth, screenHeight),
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.all(3.w),
+                  padding: EdgeInsets.all(screenWidth * 0.03),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       _buildProductName(theme),
-                      SizedBox(height: 0.5.h),
-                      _buildRatingRow(theme),
+                      SizedBox(height: screenHeight * 0.005),
+                      _buildRatingRow(theme, screenWidth),
                       const Spacer(),
-                      _buildPriceRow(theme),
+                      _buildPriceRow(theme, screenWidth),
                     ],
                   ),
                 ),
@@ -97,7 +101,7 @@ class _ProductCardWidgetState extends State<ProductCardWidget> {
   }
 
   /// Builds product image section
-  Widget _buildProductImage(ThemeData theme) {
+  Widget _buildProductImage(ThemeData theme, double screenWidth, double screenHeight) {
     return Stack(
       children: [
         ClipRRect(
@@ -105,17 +109,17 @@ class _ProductCardWidgetState extends State<ProductCardWidget> {
           child: CustomImageWidget(
             imageUrl: widget.product["image"] as String,
             width: double.infinity,
-            height: 20.h,
+            height: screenHeight * 0.18,
             fit: BoxFit.cover,
             semanticLabel: widget.product["semanticLabel"] as String,
           ),
         ),
         if (widget.isInCart)
           Positioned(
-            top: 1.h,
-            right: 2.w,
+            top: screenHeight * 0.01,
+            right: screenWidth * 0.02,
             child: Container(
-              padding: EdgeInsets.all(1.w),
+              padding: EdgeInsets.all(screenWidth * 0.01),
               decoration: BoxDecoration(
                 color: theme.colorScheme.tertiary,
                 shape: BoxShape.circle,
@@ -140,34 +144,39 @@ class _ProductCardWidgetState extends State<ProductCardWidget> {
 
   /// Builds product name
   Widget _buildProductName(ThemeData theme) {
-    return Text(
-      widget.product["name"] as String,
-      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
+    return Flexible(
+      child: Text(
+        widget.product["name"] as String,
+        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 
   /// Builds rating and review count row
-  Widget _buildRatingRow(ThemeData theme) {
+  Widget _buildRatingRow(ThemeData theme, double screenWidth) {
     final rating = widget.product["rating"] as double;
     final reviews = widget.product["reviews"] as int;
 
     return Row(
       children: [
         CustomIconWidget(iconName: 'star', color: Colors.amber, size: 14),
-        SizedBox(width: 1.w),
+        SizedBox(width: screenWidth * 0.01),
         Text(
           rating.toString(),
           style: theme.textTheme.bodySmall?.copyWith(
             fontWeight: FontWeight.w500,
           ),
         ),
-        SizedBox(width: 1.w),
-        Text(
-          '($reviews)',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+        SizedBox(width: screenWidth * 0.01),
+        Flexible(
+          child: Text(
+            '($reviews)',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -175,20 +184,23 @@ class _ProductCardWidgetState extends State<ProductCardWidget> {
   }
 
   /// Builds price row with add to cart indicator
-  Widget _buildPriceRow(ThemeData theme) {
+  Widget _buildPriceRow(ThemeData theme, double screenWidth) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          widget.product["price"] as String,
-          style: theme.textTheme.titleLarge?.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w700,
+        Flexible(
+          child: Text(
+            widget.product["price"] as String,
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w700,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
         if (!widget.isInCart)
           Container(
-            padding: EdgeInsets.all(1.w),
+            padding: EdgeInsets.all(screenWidth * 0.01),
             decoration: BoxDecoration(
               color: theme.colorScheme.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,

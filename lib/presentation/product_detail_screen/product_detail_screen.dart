@@ -1,6 +1,5 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
-import 'package:sizer/sizer.dart';
 
 import '../../../core/app_export.dart';
 import './widgets/add_to_cart_button_widget.dart';
@@ -133,6 +132,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     final images = (_productData["images"] as List)
         .cast<Map<String, dynamic>>();
 
@@ -157,7 +158,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         title: Text('Product Details', style: theme.appBarTheme.titleTextStyle),
         actions: [
           Padding(
-            padding: EdgeInsets.only(right: 2.w),
+            padding: EdgeInsets.only(right: screenWidth * 0.02),
             child: Stack(
               alignment: Alignment.center,
               children: [
@@ -171,21 +172,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   onPressed: _navigateToCart,
                   tooltip: 'Shopping cart',
-                  padding: EdgeInsets.all(3.w),
+                  padding: EdgeInsets.all(screenWidth * 0.03),
                 ),
                 if (_cartItemCount > 0)
                   Positioned(
-                    right: 2.w,
-                    top: 2.h,
+                    right: screenWidth * 0.02,
+                    top: screenHeight * 0.02,
                     child: Container(
-                      padding: EdgeInsets.all(1.w),
+                      padding: EdgeInsets.all(screenWidth * 0.01),
                       constraints: BoxConstraints(
-                        minWidth: 4.w,
-                        minHeight: 2.h,
+                        minWidth: screenWidth * 0.04,
+                        minHeight: screenHeight * 0.02,
                       ),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.tertiary,
-                        borderRadius: BorderRadius.circular(2.w),
+                        borderRadius: BorderRadius.circular(screenWidth * 0.02),
                         boxShadow: [
                           BoxShadow(
                             color: theme.shadowColor.withValues(alpha: 0.3),
@@ -198,7 +199,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         _cartItemCount > 99 ? '99+' : _cartItemCount.toString(),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: theme.colorScheme.onTertiary,
-                          fontSize: 8.sp,
+                          fontSize: 10,
                           fontWeight: FontWeight.w600,
                           height: 1.0,
                         ),
@@ -221,13 +222,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   // Image Carousel
                   Container(
                     width: double.infinity,
-                    height: 40.h,
+                    height: screenHeight * 0.4,
                     color: theme.colorScheme.surface,
                     child: Stack(
                       children: [
                         CarouselSlider(
                           options: CarouselOptions(
-                            height: 40.h,
+                            height: screenHeight * 0.4,
                             viewportFraction: 1.0,
                             enableInfiniteScroll: images.length > 1,
                             autoPlay: false,
@@ -249,7 +250,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   child: CustomImageWidget(
                                     imageUrl: image["url"] as String,
                                     width: double.infinity,
-                                    height: 40.h,
+                                    height: screenHeight * 0.4,
                                     fit: BoxFit.contain,
                                     semanticLabel:
                                     image["semanticLabel"] as String,
@@ -261,7 +262,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ),
                         if (images.length > 1)
                           Positioned(
-                            bottom: 2.h,
+                            bottom: screenHeight * 0.02,
                             left: 0,
                             right: 0,
                             child: Row(
@@ -269,9 +270,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               children: List.generate(
                                 images.length,
                                     (index) => Container(
-                                  width: 2.w,
-                                  height: 2.w,
-                                  margin: EdgeInsets.symmetric(horizontal: 1.w),
+                                  width: screenWidth * 0.02,
+                                  height: screenWidth * 0.02,
+                                  margin: EdgeInsets.symmetric(
+                                    horizontal: screenWidth * 0.01,
+                                  ),
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: _currentImageIndex == index
@@ -286,20 +289,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ],
                     ),
                   ),
-                  SizedBox(height: 2.h),
+                  SizedBox(height: screenHeight * 0.02),
                   // Product Information Card
                   ProductInfoCardWidget(productData: _productData),
-                  SizedBox(height: 2.h),
+                  SizedBox(height: screenHeight * 0.02),
                   // Quantity Selector
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 4.w),
+                    padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
                     child: QuantitySelectorWidget(
                       quantity: _quantity,
                       onIncrement: _incrementQuantity,
                       onDecrement: _decrementQuantity,
                     ),
                   ),
-                  SizedBox(height: 10.h),
+                  SizedBox(height: screenHeight * 0.1),
                 ],
               ),
             ),

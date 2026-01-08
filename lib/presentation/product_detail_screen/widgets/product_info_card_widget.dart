@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:sizer/sizer.dart';
 
 import '../../../../core/app_export.dart';
 import '../../../widgets/custom_icon_widget.dart';
@@ -20,14 +19,16 @@ class ProductInfoCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return Container(
       width: double.infinity,
-      margin: EdgeInsets.symmetric(horizontal: 4.w),
-      padding: EdgeInsets.all(4.w),
+      margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
+      padding: EdgeInsets.all(screenWidth * 0.04),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(3.w),
+        borderRadius: BorderRadius.circular(screenWidth * 0.03),
         boxShadow: [
           BoxShadow(
             color: theme.shadowColor.withValues(alpha: 0.1),
@@ -47,16 +48,16 @@ class ProductInfoCardWidget extends StatelessWidget {
               color: theme.colorScheme.onSurface,
             ),
           ),
-          SizedBox(height: 1.h),
+          SizedBox(height: screenHeight * 0.01),
           // Rating and Reviews
           Row(
             children: [
               CustomIconWidget(
                 iconName: 'star',
                 color: Colors.amber,
-                size: 18.sp,
+                size: 18,
               ),
-              SizedBox(width: 1.w),
+              SizedBox(width: screenWidth * 0.01),
               Text(
                 '${productData["rating"]}',
                 style: theme.textTheme.bodyMedium?.copyWith(
@@ -64,7 +65,7 @@ class ProductInfoCardWidget extends StatelessWidget {
                   color: theme.colorScheme.onSurface,
                 ),
               ),
-              SizedBox(width: 2.w),
+              SizedBox(width: screenWidth * 0.02),
               Text(
                 '(${productData["reviewCount"]} reviews)',
                 style: theme.textTheme.bodyMedium?.copyWith(
@@ -73,7 +74,7 @@ class ProductInfoCardWidget extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 2.h),
+          SizedBox(height: screenHeight * 0.02),
           // Price
           Text(
             productData["price"] as String,
@@ -82,13 +83,13 @@ class ProductInfoCardWidget extends StatelessWidget {
               color: theme.colorScheme.primary,
             ),
           ),
-          SizedBox(height: 2.h),
+          SizedBox(height: screenHeight * 0.02),
           // Divider
           Divider(
             color: theme.colorScheme.outline.withValues(alpha: 0.3),
             thickness: 1,
           ),
-          SizedBox(height: 2.h),
+          SizedBox(height: screenHeight * 0.02),
           // Description Label
           Text(
             'Description',
@@ -97,7 +98,7 @@ class ProductInfoCardWidget extends StatelessWidget {
               color: theme.colorScheme.onSurface,
             ),
           ),
-          SizedBox(height: 1.h),
+          SizedBox(height: screenHeight * 0.01),
           // Description Text
           Text(
             productData["description"] as String,

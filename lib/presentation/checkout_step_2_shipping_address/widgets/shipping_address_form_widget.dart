@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:sizer/sizer.dart';
 
 import '../../checkout_step_1_user_details/controller/checkout_controller.dart';
 
@@ -68,6 +67,8 @@ class ShippingAddressFormWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     final List<String> countries = [
       'United States',
@@ -87,7 +88,7 @@ class ShippingAddressFormWidget extends StatelessWidget {
       child: Card(
         elevation: 2.0,
         child: Padding(
-          padding: EdgeInsets.all(4.w),
+          padding: EdgeInsets.all(screenWidth * 0.04),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -97,7 +98,7 @@ class ShippingAddressFormWidget extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              SizedBox(height: 2.h),
+              SizedBox(height: screenHeight * 0.02),
               TextFormField(
                 controller: streetAddressController,
                 decoration: InputDecoration(
@@ -110,7 +111,7 @@ class ShippingAddressFormWidget extends StatelessWidget {
                 maxLines: 2,
                 validator: _validateStreetAddress,
               ),
-              SizedBox(height: 2.h),
+              SizedBox(height: screenHeight * 0.02),
               Row(
                 children: [
                   Expanded(
@@ -127,7 +128,7 @@ class ShippingAddressFormWidget extends StatelessWidget {
                       validator: _validateCity,
                     ),
                   ),
-                  SizedBox(width: 3.w),
+                  SizedBox(width: screenWidth * 0.03),
                   Expanded(
                     flex: 1,
                     child: TextFormField(
@@ -147,10 +148,12 @@ class ShippingAddressFormWidget extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: 2.h),
+              SizedBox(height: screenHeight * 0.02),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
+                    flex: 1,
                     child: TextFormField(
                       controller: postalCodeController,
                       decoration: InputDecoration(
@@ -169,7 +172,7 @@ class ShippingAddressFormWidget extends StatelessWidget {
                       validator: _validatePostalCode,
                     ),
                   ),
-                  SizedBox(width: 3.w),
+                  SizedBox(width: screenWidth * 0.03),
                   Expanded(
                     flex: 2,
                     child: Obx(
@@ -178,13 +181,19 @@ class ShippingAddressFormWidget extends StatelessWidget {
                         decoration: InputDecoration(
                           labelText: 'Country',
                           prefixIcon: Icon(Icons.public_outlined),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.03,
+                            vertical: screenHeight * 0.015,
+                          ),
                         ),
+                        isExpanded: true,
                         items: countries.map((country) {
                           return DropdownMenuItem(
                             value: country,
                             child: Text(
                               country,
                               overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodyMedium,
                             ),
                           );
                         }).toList(),
@@ -198,16 +207,16 @@ class ShippingAddressFormWidget extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: 2.h),
+              SizedBox(height: screenHeight * 0.02),
               Divider(),
-              SizedBox(height: 2.h),
+              SizedBox(height: screenHeight * 0.02),
               Text(
                 'Delivery Preferences',
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              SizedBox(height: 1.h),
+              SizedBox(height: screenHeight * 0.01),
               TextFormField(
                 controller: deliveryInstructionsController,
                 decoration: InputDecoration(
