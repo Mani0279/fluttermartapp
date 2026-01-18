@@ -29,11 +29,17 @@ class CartController extends GetxController {
   final RxDouble subtotal = 0.0.obs;
   final RxDouble tax = 0.0.obs;
   final RxDouble total = 0.0.obs;
+  final RxString appliedCoupon = ''.obs;
+  final RxDouble discountAmount = 0.0.obs;
+  final RxString couponError = ''.obs;
+  final RxDouble finalTotal = 0.0.obs;
 
   @override
   void onInit() {
     super.onInit();
     _initializeCart();
+    everAll([subtotal, appliedCoupon], (_) => _calculateFinalTotal());
+    _calculateTotals();
   }
 
   /// Initializes empty cart (no mock data by default)
@@ -188,7 +194,7 @@ class CartController extends GetxController {
     cartItems[index]['quantity'] = newQuantity;
     cartItems.refresh();
     _calculateTotals();
-
+    _revalidateCouponAfterChange();
     Fluttertoast.showToast(
       msg: "Quantity updated",
       toastLength: Toast.LENGTH_SHORT,
@@ -257,6 +263,7 @@ class CartController extends GetxController {
       cartProductIds.refresh();
 
       _calculateTotals();
+      _revalidateCouponAfterChange();
 
       Fluttertoast.showToast(
         msg: "Item removed from cart",
@@ -275,6 +282,72 @@ class CartController extends GetxController {
         textColor: Colors.white,
       );
     }
+  }
+  // Apply coupon logic (dummy rules)
+  void applyCoupon(String code) {
+    couponError.value = '';
+    final input = code.trim().toUpperCase();
+
+    if (input.isEmpty) {
+      couponError.value = "Please enter a coupon code";
+      return;
+    }
+
+    double newDiscount = 0.0;
+    String successMsg = '';
+
+    switch (input) {
+      case 'SAVE10':
+        newDiscount = subtotal.value * 0.10;
+        successMsg = '10% discount applied!';
+        break;
+
+      case 'FLAT100':
+        if (subtotal.value >= 500) {
+          newDiscount = 100.0;
+          successMsg = '₹100 flat discount applied!';
+        } else {
+          couponError.value = 'Cart total must be ≥ ₹500 for FLAT100';
+          return;
+        }
+        break;
+
+      default:
+        couponError.value = 'Invalid coupon code';
+        return;
+    }
+
+    // Success path
+    appliedCoupon.value = input;
+    discountAmount.value = newDiscount;
+    Fluttertoast.showToast(
+      msg: successMsg,
+      backgroundColor: Colors.green,
+      textColor: Colors.white,
+    );
+
+    _calculateFinalTotal();
+  }
+
+  // Remove / clear coupon
+  void removeCoupon() {
+    appliedCoupon.value = '';
+    discountAmount.value = 0.0;
+    couponError.value = '';
+    Fluttertoast.showToast(
+      msg: "Coupon removed",
+      backgroundColor: Colors.grey[800],
+      textColor: Colors.white,
+    );
+    _calculateFinalTotal();
+  }
+
+  // Called when subtotal or coupon changes
+  void _calculateFinalTotal() {
+    finalTotal.value = subtotal.value + tax.value - discountAmount.value;
+
+    // Prevent negative total (edge case)
+    if (finalTotal.value < 0) finalTotal.value = 0.0;
   }
 
   /// Clears all items from cart with confirmation
@@ -368,6 +441,20 @@ class CartController extends GetxController {
       gravity: ToastGravity.BOTTOM,
     );
   }
+
+  void _revalidateCouponAfterChange() {
+    if (appliedCoupon.value.isEmpty) return;
+
+    if (appliedCoupon.value == 'FLAT100' && subtotal.value < 500) {
+      Fluttertoast.showToast(
+        msg: "FLAT100 no longer valid (total < ₹500)",
+        backgroundColor: Colors.orange,
+      );
+      removeCoupon();
+    }
+    // You can add more revalidation rules for other coupons here
+  }
+
 
   /// Proceeds to checkout with validation
   void proceedToCheckout(BuildContext context) {
